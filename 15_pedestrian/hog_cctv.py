@@ -1,9 +1,12 @@
 import sys
+import os
 import cv2 as cv
 import imutils
 
 from multiprocessing.pool import ThreadPool
 from collections import deque
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '../common'))
 
 from common import clock, draw_str, StatValue
 import video
