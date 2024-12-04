@@ -1,88 +1,57 @@
 import sys
+import os
 import cv2 as cv
+import numpy as np
+from imutils.object_detection import non_max_suppression
 
-WNAME1 = "Train"
-WNAME2 = "Query"
-WNAME3 = "Result"
-WNAME4 = "Noised"
-WNAME5 = "NoisedResult"
-plcolor = (0,255,0)
-plcolor2 = (0,0,255)
-plsize = 2
+# https://stackoverflow.com/a/72863718
+# max-supress and return only left-top x position for each result
+def max_supression(result, template):
+	threshold = 0.90
+	(yCoords, xCoords) = np.where(result >= threshold)
 
-def match_template_bb(train, query):
-	result = cv.matchTemplate(train, query,
-        cv.TM_CCOEFF_NORMED)
-	(minVal, maxVal, minLoc, maxLoc) = cv.minMaxLoc(result)
-	print(minVal, maxVal, minLoc, maxLoc)
+	# Perform non-maximum suppression.
+	template_h, template_w = template.shape[:2]
+	rects = []
+	for (x, y) in zip(xCoords, yCoords):
+		rects.append((x, y, x + template_w, y + template_h))
+	return [ a[0] for a in non_max_suppression(np.array(rects))]
 
-	(startX, startY) = maxLoc
-	endX = startX + query.shape[1]
-	endY = startY + query.shape[0]
-	return (startX, startY, endX, endY)
 
 # ./train.png ./query.png
 train = cv.imread(sys.argv[1])
-#cv.imshow(WNAME1, train)
-
-query = cv.imread(sys.argv[2])
-cv.imshow(WNAME2, query)
-
-# noise type: 0 - randu, 1 - randn
-t = int(sys.argv[3])
-# noise param 1 (mean)
-m = int(sys.argv[4])
-# noise param 2 (sigma or high)
-s = int(sys.argv[5])
-# rotation degree 15/32/45
-d = int(sys.argv[6])
-# resize float 1.5
-r = float(sys.argv[7])
-print(r)
-
 train_gray = cv.cvtColor(train, cv.COLOR_BGR2GRAY)
-query_gray = cv.cvtColor(query, cv.COLOR_BGR2GRAY)
 
+imagenames = ['zero.png', 'one.png', 'two.png', 'three.png', 'four.png', 'five.png', 'six.png', 'seven.png', 'eight.png', 'nine.png']
+images = [cv.imread(imagename, cv.IMREAD_GRAYSCALE) for imagename in imagenames]
 
-(startX, startY, endX, endY) = match_template_bb(train_gray, query_gray)
+#for i, image in enumerate(images):
+#	cv.imshow("Image"+str(i), image)
 
-res1 = train.copy()
-cv.rectangle(res1, (startX, startY), (endX, endY), plcolor, plsize)
-cv.imshow(WNAME3, res1)
+results = [(i, cv.matchTemplate(train_gray, image, cv.TM_CCOEFF_NORMED), image) for (i, image) in enumerate(images)]
 
-#=== noise incoming ===#
+tresults = [(i, max_supression(result, image)) for (i, result, image) in results]
 
-mv = (m,m,m)
-sv = (s,s,s)
+numbers = []
 
-if t > 0:
-        # add gaussian
-        noise = cv.randn(train.copy(), mv, sv) 
-else:
-        noise = cv.randu(train.copy(), mv, sv)
+for (i, result) in tresults:
+	#print(i, result)
+	for j in result:
+		numbers.append((j,i))
 
-img_res = cv.add(train.copy(), noise)
+numbers.sort()
+onlynumbers = [str(i) for (j,i) in numbers]
+index = 0
+inserted = 0
+while (index - 2) > len(numbers) * (-1):
+	index = index - 2
+	onlynumbers.insert(index-inserted, ':')
+	inserted += 1
 
-(h, w) = img_res.shape[:2]
-(cX, cY) = (w // 2, h // 2)
+#print(onlynumbers)
+print(''.join(onlynumbers))
 
-M = cv.getRotationMatrix2D((cX, cY), d, 1.0)
-img_rot = cv.warpAffine(img_res, M, (w, h))
-
-img_res = cv.resize(img_rot, ((int)(w*r), (int)(h*r)))
-
-img_gray = cv.cvtColor(img_res, cv.COLOR_BGR2GRAY)
-#cv.imshow(WNAME4, img_gray)
-
-(startX2, startY2, endX2, endY2) = match_template_bb(img_gray, query_gray)
-
-cv.rectangle(img_res, (startX2, startY2), (endX2, endY2), plcolor2, plsize)
-cv.imshow(WNAME5, img_res)
-
+cv.imshow("Reference", train)
 ch = cv.waitKey(0)
-
 cv.destroyAllWindows()
-
-
-
 
