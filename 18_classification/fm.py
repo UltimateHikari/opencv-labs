@@ -49,7 +49,7 @@ print(h, hb, hc)
 h, w = img.shape[:2]
 
 if (grblacked == "blacked"):
-	img = cv.rectangle(img, (int(0), int(0.95*h)), (int(w), int(h)), (0,0,0), -1)
+	img = cv.rectangle(img, (int(0), int(0.9*h)), (int(w), int(h)), (0,0,0), -1)
 
 # Initiate SIFT detector
 sift = cv.SIFT_create(200)
@@ -78,6 +78,7 @@ for i,(m,n) in enumerate(matches_badg):
 	if m.distance < ratio*n.distance:
 		matchesMask_b[i]=[1,0]
 		matches_badger += 1
+		print(m)
 
 draw_params_b = dict(matchColor = (0,255,0),
                    singlePointColor = (255,0,0),
@@ -97,6 +98,7 @@ hc, _ = chip.shape[:2]
 borderType = cv.BORDER_CONSTANT
 img = cv.copyMakeBorder(img, int(hc-h), 0, 0, 0, borderType, (0,0,0))
 
+kp1, des1 = sift.detectAndCompute(img,None)
 
 # chip test
 matches_chip = flann.knnMatch(des1,des3,k=2)
